@@ -18,3 +18,40 @@ class GestureClassifier:
                 fingers.append(1)
             else:
                 fingers.append(0)
+
+        return fingers
+
+    def classify(self, landmarks):
+        if not landmarks or len(landmarks) < 21:
+            return "NO_HAND"
+
+        fingers = self.get_finger_states(landmarks)
+        if fingers is None:
+            return "NO_HAND"
+
+        non_thumb = fingers[1:]
+
+        if fingers == [1, 1, 1, 1, 1]:
+            return "OPEN_HAND"
+
+        if fingers == [0, 0, 0, 0, 0]:
+            return "CLOSED_FIST"
+
+        if non_thumb == [1, 0, 0, 0] and fingers[0] == 0:
+            return "INDEX_UP"
+
+        if non_thumb == [1, 1, 0, 0] and fingers[0] == 0:
+            return "TWO_FINGERS"
+
+        if non_thumb == [0, 0, 0, 0]:
+            thumb_tip_y  = landmarks[4][1]
+            thumb_base_y = landmarks[2][1]
+            wrist_y      = landmarks[0][1]
+
+            if thumb_tip_y < thumb_base_y and thumb_tip_y < wrist_y:
+                return "THUMB_UP"
+
+            if thumb_tip_y > thumb_base_y:
+                return "THUMB_DOWN"
+
+        return "UNKNOWN"

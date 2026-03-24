@@ -28,10 +28,15 @@ CONNECTIONS = [
 GESTURE_COLORS = {
     "OPEN_HAND":    (0, 255, 0),
     "CLOSED_FIST":  (0, 0, 255),
-    "INDEX_UP":     (255, 255, 0),
-    "TWO_FINGERS":  (255, 165, 0),
     "THUMB_UP":     (0, 255, 255),
     "THUMB_DOWN":   (128, 0, 255),
+    "PREV_TRACK":   (255, 165, 0),
+    "NEXT_TRACK":   (255, 100, 0),
+    "SPIDERMAN":    (255, 0, 150),
+    "PROFILE_1":    (255, 200, 0),
+    "PROFILE_2":    (0, 255, 120),
+    "PROFILE_3":    (180, 100, 255),
+    "PROFILE_4":    (0, 180, 255),
     "UNKNOWN":      (180, 180, 180),
     "NO_HAND":      (180, 180, 180),
 }
@@ -42,6 +47,8 @@ PROFILE_COLORS = {
     "3": (180, 100, 255),
     "4": (0, 180, 255),
 }
+
+SYSTEM_GESTURES = {"SPIDERMAN", "PROFILE_1", "PROFILE_2", "PROFILE_3", "PROFILE_4", "QUIT"}
 
 if not os.path.exists(MODEL_PATH):
     print("Descargando modelo... (solo la primera vez)")
@@ -113,16 +120,18 @@ def draw_progress_bar(frame, progress, gesture, color):
     cv2.rectangle(frame, (bar_x, bar_y), (bar_x + bar_w, bar_y + bar_h), (200, 200, 200), 1)
 
 
-def draw_profile_indicator(frame, profile_name, profile_key):
+def draw_profile_indicator(frame, profile_name, profile_key, paused):
     h, w, _ = frame.shape
     color = PROFILE_COLORS.get(profile_key, (255, 255, 255))
     label = f"Perfil {profile_key}: {profile_name}"
     cv2.putText(frame, label, (w - 280, 30),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+    if paused:
+        cv2.putText(frame, "PAUSADO", (w - 140, 60),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
 
 def build_dispatcher(profile_actions, pc):
-    """Crea un dispatcher nuevo con las acciones del perfil activo."""
     dispatcher = ActionDispatcher(hold_time=0.5)
     repeat_gestures = ["THUMB_UP", "THUMB_DOWN"]
     for gesture, action_name in profile_actions.items():
@@ -139,14 +148,15 @@ if __name__ == "__main__":
     cap = cv2.VideoCapture(0)
     detector = HandDetector()
     pc = PCController()
+    paused = True
 
     profiles = ProfileManager()
 
     profiles.register_profile("1", "PC", {
         "OPEN_HAND":   "play_pause",
         "CLOSED_FIST": "mute",
-        "INDEX_UP":    "prev_track",
-        "TWO_FINGERS": "next_track",
+        "PREV_TRACK":  "prev_track",
+        "NEXT_TRACK":  "next_track",
         "THUMB_UP":    "volume_up",
         "THUMB_DOWN":  "volume_down",
     })
@@ -154,8 +164,6 @@ if __name__ == "__main__":
     profiles.register_profile("2", "Luces", {
         "OPEN_HAND":   "lights_on",
         "CLOSED_FIST": "lights_off",
-        "INDEX_UP":    "bulb_only",
-        "TWO_FINGERS": "led_only",
         "THUMB_UP":    "brightness_up",
         "THUMB_DOWN":  "brightness_down",
     })
@@ -163,8 +171,6 @@ if __name__ == "__main__":
     profiles.register_profile("3", "Zen", {
         "OPEN_HAND":   "zen_on",
         "CLOSED_FIST": "zen_off",
-        "INDEX_UP":    "dim_lights",
-        "TWO_FINGERS": "lights_off",
         "THUMB_UP":    "brightness_up",
         "THUMB_DOWN":  "brightness_down",
     })
@@ -172,18 +178,29 @@ if __name__ == "__main__":
     profiles.register_profile("4", "Musica", {
         "OPEN_HAND":   "play_pause",
         "CLOSED_FIST": "mute",
-        "INDEX_UP":    "prev_track",
-        "TWO_FINGERS": "next_track",
+        "PREV_TRACK":  "prev_track",
+        "NEXT_TRACK":  "next_track",
         "THUMB_UP":    "volume_up",
         "THUMB_DOWN":  "volume_down",
     })
 
-    # Perfil inicial
     profiles.switch_to("1")
     dispatcher = build_dispatcher(profiles.get_current_actions(), pc)
 
+    # Dispatcher exclusivo para gestos de sistema
+    system_dispatcher = ActionDispatcher(hold_time=0.8)
+    system_dispatcher.register("SPIDERMAN", lambda: None)
+    system_dispatcher.register("PROFILE_1", lambda: None)
+    system_dispatcher.register("PROFILE_2", lambda: None)
+    system_dispatcher.register("PROFILE_3", lambda: None)
+    system_dispatcher.register("PROFILE_4", lambda: None)
+    system_dispatcher.register("QUIT", lambda: None)
+
+    quit_dispatcher = ActionDispatcher(hold_time=5.0)
+    quit_dispatcher.register("QUIT", lambda: None)
+
     timestamp = 0
-    print("Sistema iniciado. Teclas 1-4 para cambiar perfil. Q para salir.")
+    print("Sistema iniciado. Gestos de perfil para cambiar. Spiderman para pausar. Q para salir.")
 
     while True:
         success, frame = cap.read()
@@ -193,11 +210,44 @@ if __name__ == "__main__":
         timestamp += 33
         frame = detector.process_frame(frame, timestamp)
         landmarks = detector.get_landmarks(frame)
-
         gesture = detector.classifier.classify(landmarks)
-        executed = dispatcher.update(gesture)
-        progress = dispatcher.get_progress()
         color = GESTURE_COLORS.get(gesture, (180, 180, 180))
+
+        #QUIT siempre activo para cerrar el programa
+        if gesture == "QUIT":
+            executed_quit = quit_dispatcher.update(gesture)
+            progress = quit_dispatcher.get_progress()
+            if executed_quit == "QUIT":
+                print("[SISTEMA] Cerrando programa...")
+                break
+
+        # Spiderman siempre activo para pausar/reanudar
+        if gesture == "SPIDERMAN":
+            executed_system = system_dispatcher.update(gesture)
+            progress = system_dispatcher.get_progress()
+            if executed_system == "SPIDERMAN":
+                paused = not paused
+                print(f"[SISTEMA] {'Pausado' if paused else 'Reanudado'}")
+
+        # Cambio de perfil y acciones solo si NO está pausado
+        elif not paused:
+            if gesture in SYSTEM_GESTURES:
+                executed_system = system_dispatcher.update(gesture)
+                progress = system_dispatcher.get_progress()
+                if executed_system in ("PROFILE_1", "PROFILE_2", "PROFILE_3", "PROFILE_4"):
+                    key = executed_system[-1]
+                    profiles.switch_to(key)
+                    dispatcher = build_dispatcher(profiles.get_current_actions(), pc)
+            else:
+                system_dispatcher.update("NO_HAND")
+                executed = dispatcher.update(gesture)
+                progress = dispatcher.get_progress()
+
+        # Si está pausado e hizo otro gesto, ignorar todo
+        else:
+            system_dispatcher.update("NO_HAND")
+            dispatcher.update("NO_HAND")
+            progress = 0.0
 
         hand_label = "Mano de control detectada" if landmarks else "Esperando mano de control..."
         cv2.putText(frame, hand_label, (10, 30),
@@ -206,22 +256,14 @@ if __name__ == "__main__":
         cv2.putText(frame, f"Gesto: {gesture}", (10, 65),
                     cv2.FONT_HERSHEY_SIMPLEX, 1.0, color, 2)
 
-        if executed:
-            cv2.putText(frame, f"EJECUTADO: {executed}", (10, 105),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-
         draw_progress_bar(frame, progress, gesture, color)
-        draw_profile_indicator(frame, profiles.get_current_name(), profiles.current_profile)
+        draw_profile_indicator(frame, profiles.get_current_name(),
+                               profiles.current_profile, paused)
 
         cv2.imshow("GBIAS - Intelligent Assistant", frame)
 
-        key = cv2.waitKey(1) & 0xFF
-        if key == ord('q'):
+        if cv2.waitKey(1) & 0xFF == ord('q'):
             break
-        elif key in [ord('1'), ord('2'), ord('3'), ord('4')]:
-            profile_key = chr(key)
-            profiles.switch_to(profile_key)
-            dispatcher = build_dispatcher(profiles.get_current_actions(), pc)
 
     cap.release()
     cv2.destroyAllWindows()

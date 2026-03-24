@@ -36,12 +36,24 @@ class GestureClassifier:
 
         if fingers == [0, 0, 0, 0, 0]:
             return "CLOSED_FIST"
+        
+        if fingers[0] == 1 and non_thumb == [1, 0, 0, 1]:
+            return "SPIDERMAN"
+        
+        if fingers[0] == 0 and non_thumb == [1, 0, 0, 0]:
+            return "PROFILE_1"
+        
+        if fingers[0] == 0 and non_thumb == [1, 1, 0, 0]:
+            return "PROFILE_2"
+        
+        if fingers[0] == 0 and non_thumb == [1, 1, 1, 0]:
+            return "PROFILE_3"
+        
+        if fingers[0] == 0 and non_thumb == [1, 1, 1, 1]:
+            return "PROFILE_4"
 
-        if non_thumb == [1, 0, 0, 0] and fingers[0] == 0:
-            return "INDEX_UP"
-
-        if non_thumb == [1, 1, 0, 0] and fingers[0] == 0:
-            return "TWO_FINGERS"
+        if fingers[0] == 0 and non_thumb == [0, 1, 0, 0]:
+            return "QUIT"
 
         if non_thumb == [0, 0, 0, 0]:
             thumb_tip_y  = landmarks[4][1]
@@ -53,5 +65,11 @@ class GestureClassifier:
 
             if thumb_tip_y > thumb_base_y:
                 return "THUMB_DOWN"
+
+        if fingers[0] == 1 and non_thumb == [1, 0, 0, 0]:
+            return "PREV_TRACK"
+        
+        if fingers[0] == 0 and non_thumb == [0, 0, 0, 1]:
+            return "NEXT_TRACK"
 
         return "UNKNOWN"

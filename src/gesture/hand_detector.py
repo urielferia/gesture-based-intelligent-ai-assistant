@@ -10,6 +10,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from src.gesture.gesture_classifier import GestureClassifier
 from src.core.action_dispatcher import ActionDispatcher
+from src.core.profile_manager import ProfileManager
 from src.integrations.pc_controller import PCController
 
 MODEL_PATH = "hand_landmarker.task"
@@ -35,10 +36,18 @@ GESTURE_COLORS = {
     "NO_HAND":      (180, 180, 180),
 }
 
+PROFILE_COLORS = {
+    "1": (255, 200, 0),
+    "2": (0, 255, 120),
+    "3": (180, 100, 255),
+    "4": (0, 180, 255),
+}
+
 if not os.path.exists(MODEL_PATH):
     print("Descargando modelo... (solo la primera vez)")
     urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
     print("Modelo descargado.")
+
 
 class HandDetector:
     def __init__(self):
@@ -97,7 +106,6 @@ def draw_progress_bar(frame, progress, gesture, color):
     bar_x = int(w * 0.3)
     bar_y = h - 40
     bar_h = 16
-
     cv2.rectangle(frame, (bar_x, bar_y), (bar_x + bar_w, bar_y + bar_h), (50, 50, 50), -1)
     fill = int(bar_w * progress)
     if fill > 0:
@@ -105,22 +113,77 @@ def draw_progress_bar(frame, progress, gesture, color):
     cv2.rectangle(frame, (bar_x, bar_y), (bar_x + bar_w, bar_y + bar_h), (200, 200, 200), 1)
 
 
+def draw_profile_indicator(frame, profile_name, profile_key):
+    h, w, _ = frame.shape
+    color = PROFILE_COLORS.get(profile_key, (255, 255, 255))
+    label = f"Perfil {profile_key}: {profile_name}"
+    cv2.putText(frame, label, (w - 280, 30),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+
+
+def build_dispatcher(profile_actions, pc):
+    """Crea un dispatcher nuevo con las acciones del perfil activo."""
+    dispatcher = ActionDispatcher(hold_time=0.5)
+    repeat_gestures = ["THUMB_UP", "THUMB_DOWN"]
+    for gesture, action_name in profile_actions.items():
+        action = getattr(pc, action_name, None)
+        if action:
+            dispatcher.register(gesture, action, repeat=(gesture in repeat_gestures))
+        else:
+            dispatcher.register(gesture, lambda n=action_name: print(f"[ACCION] {n}"),
+                                repeat=(gesture in repeat_gestures))
+    return dispatcher
+
+
 if __name__ == "__main__":
     cap = cv2.VideoCapture(0)
     detector = HandDetector()
     pc = PCController()
 
-    dispatcher = ActionDispatcher(hold_time=0.5)
-    dispatcher.register("THUMB_UP",    pc.volume_up,   repeat=True)
-    dispatcher.register("THUMB_DOWN",  pc.volume_down, repeat=True)
-    dispatcher.register("OPEN_HAND",   pc.play_pause)
-    dispatcher.register("CLOSED_FIST", pc.mute)
-    dispatcher.register("INDEX_UP",    pc.prev_track)
-    dispatcher.register("TWO_FINGERS", pc.next_track)
+    profiles = ProfileManager()
+
+    profiles.register_profile("1", "PC", {
+        "OPEN_HAND":   "play_pause",
+        "CLOSED_FIST": "mute",
+        "INDEX_UP":    "prev_track",
+        "TWO_FINGERS": "next_track",
+        "THUMB_UP":    "volume_up",
+        "THUMB_DOWN":  "volume_down",
+    })
+
+    profiles.register_profile("2", "Luces", {
+        "OPEN_HAND":   "lights_on",
+        "CLOSED_FIST": "lights_off",
+        "INDEX_UP":    "bulb_only",
+        "TWO_FINGERS": "led_only",
+        "THUMB_UP":    "brightness_up",
+        "THUMB_DOWN":  "brightness_down",
+    })
+
+    profiles.register_profile("3", "Zen", {
+        "OPEN_HAND":   "zen_on",
+        "CLOSED_FIST": "zen_off",
+        "INDEX_UP":    "dim_lights",
+        "TWO_FINGERS": "lights_off",
+        "THUMB_UP":    "brightness_up",
+        "THUMB_DOWN":  "brightness_down",
+    })
+
+    profiles.register_profile("4", "Musica", {
+        "OPEN_HAND":   "play_pause",
+        "CLOSED_FIST": "mute",
+        "INDEX_UP":    "prev_track",
+        "TWO_FINGERS": "next_track",
+        "THUMB_UP":    "volume_up",
+        "THUMB_DOWN":  "volume_down",
+    })
+
+    # Perfil inicial
+    profiles.switch_to("1")
+    dispatcher = build_dispatcher(profiles.get_current_actions(), pc)
 
     timestamp = 0
-    print("Sistema iniciado. Manten un gesto 0.5 segundos para ejecutarlo.")
-    print("Presiona Q para salir.")
+    print("Sistema iniciado. Teclas 1-4 para cambiar perfil. Q para salir.")
 
     while True:
         success, frame = cap.read()
@@ -148,11 +211,17 @@ if __name__ == "__main__":
                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
 
         draw_progress_bar(frame, progress, gesture, color)
+        draw_profile_indicator(frame, profiles.get_current_name(), profiles.current_profile)
 
-        cv2.imshow("GBIAS - Action Dispatcher", frame)
+        cv2.imshow("GBIAS - Intelligent Assistant", frame)
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord('q'):
             break
+        elif key in [ord('1'), ord('2'), ord('3'), ord('4')]:
+            profile_key = chr(key)
+            profiles.switch_to(profile_key)
+            dispatcher = build_dispatcher(profiles.get_current_actions(), pc)
 
     cap.release()
     cv2.destroyAllWindows()

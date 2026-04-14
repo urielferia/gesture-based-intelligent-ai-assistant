@@ -12,6 +12,8 @@ from src.gesture.gesture_classifier import GestureClassifier
 from src.core.action_dispatcher import ActionDispatcher
 from src.core.profile_manager import ProfileManager
 from src.integrations.pc_controller import PCController
+from src.core.observation_logger import ObservationLogger
+from src.core.intent_engine import IntentEngine
 
 MODEL_PATH = "hand_landmarker.task"
 MODEL_URL = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task"
@@ -185,7 +187,11 @@ if __name__ == "__main__":
     })
 
     profiles.switch_to("1")
+    logger = ObservationLogger()
+    engine = IntentEngine()
     dispatcher = build_dispatcher(profiles.get_current_actions(), pc)
+    dispatcher.setup_intent(logger, engine)
+    dispatcher.start_intent_loop()
 
     # Dispatcher exclusivo para gestos de sistema
     system_dispatcher = ActionDispatcher(hold_time=0.8)
@@ -238,6 +244,9 @@ if __name__ == "__main__":
                     key = executed_system[-1]
                     profiles.switch_to(key)
                     dispatcher = build_dispatcher(profiles.get_current_actions(), pc)
+                    dispatcher.setup_intent(logger, engine)
+                    dispatcher.start_intent_loop
+                    logger.set_profile(profiles.get_current_name())
             else:
                 system_dispatcher.update("NO_HAND")
                 executed = dispatcher.update(gesture)
@@ -264,6 +273,14 @@ if __name__ == "__main__":
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
+
+        if dispatcher.last_intent:
+            intent_text = dispatcher.last_intent.get("inferred_intent", "")[:50]
+            conf = dispatcher.last_intent.get("confidence", 0.0)
+            cv2.putText(frame, f"Intent: {intent_text}", (10, 100),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.45, (200, 200, 0), 1)
+            cv2.putText(frame, f"Conf: {conf:.2f}", (10, 120),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.45, (200, 200, 0), 1)
 
     cap.release()
     cv2.destroyAllWindows()

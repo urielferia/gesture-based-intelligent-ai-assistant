@@ -5,7 +5,7 @@ class ProfileManager :
         self.profile_order = []
 
     def register_profile(self, key, name, actions) :
-        """Regsitra un perfil con su tecla, nombre y mapa de gestos a acciones."""
+        """Registra un perfil con su tecla, nombre y mapa de gestos a acciones."""
         self.profiles[key] = {
             "name": name,
             "actions": actions

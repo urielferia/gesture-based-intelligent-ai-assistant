@@ -53,9 +53,9 @@ PROFILE_COLORS = {
 SYSTEM_GESTURES = {"SPIDERMAN", "PROFILE_1", "PROFILE_2", "PROFILE_3", "PROFILE_4", "QUIT"}
 
 if not os.path.exists(MODEL_PATH):
-    print("Descargando modelo... (solo la primera vez)")
+    print("Downloading model... (first time only)")
     urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
-    print("Modelo descargado.")
+    print("Model downloaded.")
 
 
 class HandDetector:
@@ -125,11 +125,11 @@ def draw_progress_bar(frame, progress, gesture, color):
 def draw_profile_indicator(frame, profile_name, profile_key, paused):
     h, w, _ = frame.shape
     color = PROFILE_COLORS.get(profile_key, (255, 255, 255))
-    label = f"Perfil {profile_key}: {profile_name}"
+    label = f"Profile {profile_key}: {profile_name}"
     cv2.putText(frame, label, (w - 280, 30),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
     if paused:
-        cv2.putText(frame, "PAUSADO", (w - 140, 60),
+        cv2.putText(frame, "PAUSED", (w - 140, 60),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
 
@@ -141,7 +141,7 @@ def build_dispatcher(profile_actions, pc):
         if action:
             dispatcher.register(gesture, action, repeat=(gesture in repeat_gestures))
         else:
-            dispatcher.register(gesture, lambda n=action_name: print(f"[ACCION] {n}"),
+            dispatcher.register(gesture, lambda n=action_name: print(f"[ACTION] {n}"),
                                 repeat=(gesture in repeat_gestures))
     return dispatcher
 
@@ -163,7 +163,7 @@ if __name__ == "__main__":
         "THUMB_DOWN":  "volume_down",
     })
 
-    profiles.register_profile("2", "Luces", {
+    profiles.register_profile("2", "Lights", {
         "OPEN_HAND":   "lights_on",
         "CLOSED_FIST": "lights_off",
         "THUMB_UP":    "brightness_up",
@@ -177,7 +177,7 @@ if __name__ == "__main__":
         "THUMB_DOWN":  "brightness_down",
     })
 
-    profiles.register_profile("4", "Musica", {
+    profiles.register_profile("4", "Music", {
         "OPEN_HAND":   "play_pause",
         "CLOSED_FIST": "mute",
         "PREV_TRACK":  "prev_track",
@@ -193,7 +193,7 @@ if __name__ == "__main__":
     dispatcher.setup_intent(logger, engine)
     dispatcher.start_intent_loop()
 
-    # Dispatcher exclusivo para gestos de sistema
+    # Dedicated dispatcher for system gestures
     system_dispatcher = ActionDispatcher(hold_time=0.8)
     system_dispatcher.register("SPIDERMAN", lambda: None)
     system_dispatcher.register("PROFILE_1", lambda: None)
@@ -206,7 +206,7 @@ if __name__ == "__main__":
     quit_dispatcher.register("QUIT", lambda: None)
 
     timestamp = 0
-    print("Sistema iniciado. Gestos de perfil para cambiar. Spiderman para pausar. Q para salir.")
+    print("System started. Use profile gestures to switch profiles. Spiderman to pause/resume. Q to exit.")
 
     while True:
         success, frame = cap.read()
@@ -219,23 +219,23 @@ if __name__ == "__main__":
         gesture = detector.classifier.classify(landmarks)
         color = GESTURE_COLORS.get(gesture, (180, 180, 180))
 
-        #QUIT siempre activo para cerrar el programa
+        # QUIT always active to terminate the program
         if gesture == "QUIT":
             executed_quit = quit_dispatcher.update(gesture)
             progress = quit_dispatcher.get_progress()
             if executed_quit == "QUIT":
-                print("[SISTEMA] Cerrando programa...")
+                print("[SYSTEM] Closing program...")
                 break
 
-        # Spiderman siempre activo para pausar/reanudar
+        # Spiderman always active to pause/resume
         if gesture == "SPIDERMAN":
             executed_system = system_dispatcher.update(gesture)
             progress = system_dispatcher.get_progress()
             if executed_system == "SPIDERMAN":
                 paused = not paused
-                print(f"[SISTEMA] {'Pausado' if paused else 'Reanudado'}")
+                print(f"[SYSTEM] {'Paused' if paused else 'Resumed'}")
 
-        # Cambio de perfil y acciones solo si NO está pausado
+        # Profile switching and actions only if NOT paused
         elif not paused:
             if gesture in SYSTEM_GESTURES:
                 executed_system = system_dispatcher.update(gesture)
@@ -245,24 +245,24 @@ if __name__ == "__main__":
                     profiles.switch_to(key)
                     dispatcher = build_dispatcher(profiles.get_current_actions(), pc)
                     dispatcher.setup_intent(logger, engine)
-                    dispatcher.start_intent_loop
+                    dispatcher.start_intent_loop()
                     logger.set_profile(profiles.get_current_name())
             else:
                 system_dispatcher.update("NO_HAND")
                 executed = dispatcher.update(gesture)
                 progress = dispatcher.get_progress()
 
-        # Si está pausado e hizo otro gesto, ignorar todo
+        # If paused and another gesture is made, ignore all
         else:
             system_dispatcher.update("NO_HAND")
             dispatcher.update("NO_HAND")
             progress = 0.0
 
-        hand_label = "Mano de control detectada" if landmarks else "Esperando mano de control..."
+        hand_label = "Control hand detected" if landmarks else "Waiting for control hand..."
         cv2.putText(frame, hand_label, (10, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 200, 255), 1)
 
-        cv2.putText(frame, f"Gesto: {gesture}", (10, 65),
+        cv2.putText(frame, f"Gesture: {gesture}", (10, 65),
                     cv2.FONT_HERSHEY_SIMPLEX, 1.0, color, 2)
 
         draw_progress_bar(frame, progress, gesture, color)

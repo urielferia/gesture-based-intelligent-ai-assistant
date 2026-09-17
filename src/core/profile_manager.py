@@ -4,8 +4,8 @@ class ProfileManager :
         self.current_profile = None
         self.profile_order = []
 
-    def register_profile(self, key, name, actions) :
-        """Registra un perfil con su tecla, nombre y mapa de gestos a acciones."""
+    def register_profile(self, key, name, actions):
+        """Registers a profile with its key, name, and gesture-to-action map."""
         self.profiles[key] = {
             "name": name,
             "actions": actions
@@ -13,21 +13,21 @@ class ProfileManager :
         self.profile_order.append(key)
 
     def switch_to(self, key):
-        """Cambia al perfil indicado por tecla."""
+        """Switches to the profile indicated by key."""
         if key in self.profiles:
             self.current_profile = key
-            print(f"[PERFIL] Cambiado a: {self.profiles[key]['name']}")
+            print(f"[PROFILE] Switched to: {self.profiles[key]['name']}")
             return self.profiles[key]
         return None
     
     def get_current_actions(self):
-        """Devuelve el mapa de acciones del perfil activado."""
+        """Returns the action map of the active profile."""
         if self.current_profile and self.current_profile in self.profiles:
             return self.profiles[self.current_profile]["actions"]
-        return{}
+        return {}
     
     def get_current_name(self):
-        """Devuelve el nombre del perfil activo."""
+        """Returns the name of the active profile."""
         if self.current_profile and self.current_profile in self.profiles:
             return self.profiles[self.current_profile]["name"]
-        return "Sin perfil"
+        return "No Profile"

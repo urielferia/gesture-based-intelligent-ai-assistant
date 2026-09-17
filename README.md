@@ -57,10 +57,15 @@ pip install -r requirements.txt
     GEMINI_API_KEY=YOUR_GEMINI_API_KEY
     ```
 3.  **Run the application**:
+    **Using the batch file (Windows):**
+    Double-click `run.bat` or run:
+    ```cmd
+    run.bat
+    ```
+
+    **Or manually with Python:**
     ```bash
-    # This is a placeholder command.
-    # You will likely need to run a specific Python script, e.g.,
-    python src/main_app.py # <!-- TODO: Replace with the actual main entry point command -->
+    python src/gesture/hand_detector.py
     ```
     The application should start detecting gestures and dispatching actions based on configuration.
 

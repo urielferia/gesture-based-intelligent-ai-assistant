@@ -9,12 +9,12 @@ class PCController:
     def volume_up(self):
         if self.system == "Windows":
             pyautogui.press('volumeup')
-        print("[PC] Volumen subido")
+        print("[PC] Volume Up")
 
     def volume_down(self):
         if self.system == "Windows":
             pyautogui.press('volumedown')
-        print("[PC] Volumen bajado")
+        print("[PC] Volume Down")
 
     def mute(self):
         if self.system == "Windows":
@@ -24,12 +24,12 @@ class PCController:
     def next_track(self):
         if self.system == "Windows":
             pyautogui.press('nexttrack')
-        print("[PC] Siguiente cancion")
+        print("[PC] Next Track")
 
     def prev_track(self):
         if self.system == "Windows":
             pyautogui.press('prevtrack')
-        print("[PC] Cancion anterior")
+        print("[PC] Previous Track")
 
     def play_pause(self):
         if self.system == "Windows":

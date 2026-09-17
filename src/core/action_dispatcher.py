@@ -13,8 +13,8 @@ class ActionDispatcher:
         self.repeat_gestures = set()
         self.last_repeat_time = None
 
-        # Intent engine (opcional, se activa si se configura)
-        self.intent_interval = intent_interval  # segundos entre consultas
+        # Intent engine (optional, activated if configured)
+        self.intent_interval = intent_interval  # seconds between queries
         self.observation_logger = None
         self.intent_engine = None
         self.last_intent = None
@@ -22,12 +22,12 @@ class ActionDispatcher:
         self._running = False
 
     def setup_intent(self, observation_logger, intent_engine):
-        """Conecta el logger y el engine al dispatcher."""
+        """Connects the logger and the engine to the dispatcher."""
         self.observation_logger = observation_logger
         self.intent_engine = intent_engine
 
     def start_intent_loop(self):
-        """Inicia el hilo de inferencia en segundo plano."""
+        """Starts the inference thread in the background."""
         self._running = True
         self._intent_thread = threading.Thread(target=self._intent_loop, daemon=True)
         self._intent_thread.start()
@@ -36,7 +36,7 @@ class ActionDispatcher:
         self._running = False
 
     def _intent_loop(self):
-        """Corre en segundo plano: cada intent_interval segundos consulta a Gemini."""
+        """Runs in background: queries Gemini every intent_interval seconds."""
         while self._running:
             time.sleep(self.intent_interval)
             if self.observation_logger and self.intent_engine:
@@ -46,27 +46,27 @@ class ActionDispatcher:
                 self._handle_intent(result)
 
     def _handle_intent(self, intent: dict):
-        """Ejecuta la acción sugerida si la confianza es suficiente."""
+        """Executes the suggested action if confidence is sufficient."""
         action = intent.get("suggested_action", "none")
         confidence = intent.get("confidence", 0.0)
 
-        print(f"[INTENT] {intent.get('inferred_intent')} | acción: {action} | confianza: {confidence:.2f}")
+        print(f"[INTENT] {intent.get('inferred_intent')} | action: {action} | confidence: {confidence:.2f}")
 
         if confidence < 0.7 or action == "none":
             return
 
-        # Mapeo de acciones sugeridas por Gemini a acciones registradas
+        # Mapping of Gemini-suggested actions to registered actions
         intent_action_map = {
             "skip_track":     "NEXT_TRACK",
             "pause_media":    "CLOSED_FIST",
             "increase_volume":"OPEN_HAND",
             "lower_volume":   "THUMB_DOWN",
-            "suggest_break":  None,  # placeholder futuro
+            "suggest_break":  None,  # future placeholder
         }
 
         mapped = intent_action_map.get(action)
         if mapped and mapped in self.actions:
-            print(f"[INTENT] Ejecutando acción automática: {mapped}")
+            print(f"[INTENT] Executing automatic action: {mapped}")
             self.actions[mapped]()
 
     def register(self, gesture, action, repeat=False):
@@ -77,7 +77,7 @@ class ActionDispatcher:
     def update(self, gesture):
         now = time.time()
 
-        # Loguear gesto si el logger está conectado
+        # Log gesture if logger is connected
         if self.observation_logger and gesture not in ("NO_HAND", "UNKNOWN"):
             self.observation_logger.log_gesture(gesture)
 

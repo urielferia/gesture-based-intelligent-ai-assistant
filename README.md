@@ -4,7 +4,7 @@
 
 **An AI assistant that interprets hand gestures and intent to perform actions and control your PC.**
 
-![Python](https://img.shields.io/badge/Language-Python-blue.svg) ![License](https://img.shields.io/badge/License-See%20LICENSE%20file-blue.svg) ![Built With](https://img.shields.io/badge/Built%20With-MediaPipe%2C%20Gemini%20API-orange.svg)
+![Python](https://img.shields.io/badge/Language-Python-blue.svg) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) ![Built With](https://img.shields.io/badge/Built%20With-MediaPipe%2C%20Gemini%20API-orange.svg)
 
 </div>
 
@@ -75,7 +75,9 @@ pip install -r requirements.txt
 gesture-based-intelligent-ai-assistant/
 ├── .env
 ├── .gitignore
+├── LICENSE
 ├── README.md
+├── run.bat
 ├── config/
 │   └── settings.json
 ├── hand_landmarker.task
@@ -110,4 +112,4 @@ Contributions are welcome! Please feel free to open issues or submit pull reques
 
 ## 📄 License
 
-See LICENSE file
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
